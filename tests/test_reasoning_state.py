@@ -4,8 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from reasoning_llm_mcts.mcts import State
-from reasoning_llm_mcts.reasoning_state import (ReasoningState,
-                                                calc_confidence_score)
+from reasoning_llm_mcts.reasoning_state import ReasoningState, calc_confidence_score
 
 
 @pytest.fixture
