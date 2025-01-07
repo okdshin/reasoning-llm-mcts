@@ -167,9 +167,9 @@ async def chat_completions(request: ChatCompletionRequest):
         best_node = await mcts.search(initial_state)
 
         # Extract assistant's response (remove the prefix 'Assistant: ' if present)
-        response_text = best_node.state.total_prompt[len(prompt):]
+        response_text = best_node.state.total_prompt[len(prompt) :]
         if response_text.startswith("Assistant: "):
-            response_text = response_text[len("Assistant: "):]
+            response_text = response_text[len("Assistant: ") :]
 
         # Calculate token usage
         input_tokens = len(app.state.tokenizer.tokenize(prompt).input_ids)
