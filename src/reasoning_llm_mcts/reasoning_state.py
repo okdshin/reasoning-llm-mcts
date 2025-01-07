@@ -57,7 +57,11 @@ class ReasoningState(State):
                 self.total_token_num * self.confidence_score
                 + token_delta_num * former_confidence_score
             ) / (self.total_token_num + token_delta_num)
-            text_delta = response.choices[0].text  # TODO
+
+            # Construct text_delta from the first max_delta_new_tokens tokens
+            tokens = logprobs.tokens[: self.max_delta_new_tokens]
+            text_delta = ''.join(bytes(t.bytes).decode('utf-8') for t in tokens)
+
             child_states.append(
                 ReasoningState(
                     openai_client=self.openai_client,
@@ -134,13 +138,8 @@ def calc_confidence_score(
         # This is actual computation
         # ci_sum += math.exp(token_lp) / sum([math.exp(top_lps) for top_lps in top_lps])
 
-        # Use log-sum-exp trick to prevent overflow/underflow
         max_lp = max(top_lps)
-        log_denominator = max_lp + math.log(
-            sum(math.exp(lp - max_lp) for lp in top_lps)
-        )
+        ci_sum += math.exp(token_lp - max_lp) / sum(math.exp(lp - max_lp) for lp in top_lps)
 
-        # Convert division to subtraction in log space
-        ci_sum += math.exp(token_lp - log_denominator)
     confidence_score = ci_sum / len(token_logprobs)
     return confidence_score
