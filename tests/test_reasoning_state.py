@@ -71,6 +71,12 @@ def test_init_validation():
 
 @pytest.mark.asyncio
 async def test_expand(base_state):
+    # Create mock token objects with bytes attribute
+    mock_token1 = Mock()
+    mock_token1.bytes = b"Hello"
+    mock_token2 = Mock()
+    mock_token2.bytes = b" world"
+
     # Mock child state candidates
     mock_response1 = Mock()
     mock_response1.choices = [
@@ -78,6 +84,7 @@ async def test_expand(base_state):
             logprobs=Mock(
                 token_logprobs=[-1.0, -2.0],
                 top_logprobs=[{"a": -1.0, "b": -2.0}, {"c": -1.5, "d": -2.5}],
+                tokens=[mock_token1, mock_token2],  # Add mock tokens
             ),
             text="Response 1",
         )
@@ -89,6 +96,7 @@ async def test_expand(base_state):
             logprobs=Mock(
                 token_logprobs=[-1.2, -2.2],
                 top_logprobs=[{"e": -1.2, "f": -2.2}, {"g": -1.7, "h": -2.7}],
+                tokens=[mock_token1, mock_token2],  # Add mock tokens
             ),
             text="Response 2",
         )
@@ -100,6 +108,7 @@ async def test_expand(base_state):
     assert len(child_states) == 1
     assert isinstance(child_states[0], ReasoningState)
     assert child_states[0].parent_state == base_state
+    assert child_states[0].text_delta == "Hello world"  # Check the constructed text
 
 
 @pytest.mark.asyncio
