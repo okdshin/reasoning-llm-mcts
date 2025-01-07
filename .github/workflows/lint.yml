@@ -26,7 +26,7 @@ jobs:
     - name: Run ruff check
       run: |
         # Run with detailed output for better error understanding
-        ruff check . --show-source --show-fixes
+        ruff check . --show-files --show-fixes --statistics
         
         # Run again with GitHub format if the first check passes
         ruff check . --output-format=github
