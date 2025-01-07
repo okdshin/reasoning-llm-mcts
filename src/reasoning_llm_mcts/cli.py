@@ -1,14 +1,12 @@
 import argparse
 import asyncio
-import json
 from pathlib import Path
 from typing import Any, List, Literal, Optional, Union
 
 import jinja2
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-from tokenizers import Tokenizer
+from pydantic import BaseModel
 from transformers import AutoTokenizer
 
 from reasoning_llm_mcts.mcts import MCTS
@@ -72,31 +70,15 @@ class ChatCompletionResponse(BaseModel):
     usage: dict[str, int]
 
 
-def load_template(template_path: Optional[str] = None) -> jinja2.Template:
-    if template_path is None:
-        # Use default template
-        template_dir = Path(__file__).parent / "templates"
-        template_path = template_dir / "default.j2"
-    else:
-        template_path = Path(template_path)
-        if not template_path.exists():
-            raise FileNotFoundError(f"Template file not found: {template_path}")
-
-    template_loader = jinja2.FileSystemLoader(template_path.parent)
-    template_env = jinja2.Environment(loader=template_loader)
-    return template_env.get_template(template_path.name)
-
-
 @app.post("/v1/completions", response_model=CompletionResponse)
 async def completions(request: CompletionRequest):
     try:
+        # Create initial state with root prompt
         initial_state = ReasoningState(
-            openai_client=app.state.openai_client,
-            tokenizer=app.state.tokenizer,
+            api_base_url=app.state.openai_base_url,
             max_total_tokens=request.max_tokens,
-            max_delta_new_tokens=min(50, request.max_tokens),  # Adjust this if needed
-            text_delta=request.prompt,
-            token_delta_num=len(app.state.tokenizer.tokenize(request.prompt).input_ids),
+            max_new_tokens_delta=min(50, request.max_tokens),  # Adjust this if needed
+            root_prompt=request.prompt,
             confidence_score=1.0,  # Initial state has perfect confidence
             top_logprobs_num=request.logprobs if request.logprobs is not None else 5,
         )
@@ -111,7 +93,7 @@ async def completions(request: CompletionRequest):
 
         # Calculate total token usage
         input_tokens = len(app.state.tokenizer.tokenize(request.prompt).input_ids)
-        completion_tokens = best_node.state.total_token_num - input_tokens
+        completion_tokens = best_node.state.total_new_token_num
 
         return CompletionResponse(
             id="cmpl-" + "".join([str(x) for x in range(10)]),  # Generate a unique ID
@@ -129,7 +111,7 @@ async def completions(request: CompletionRequest):
             usage={
                 "prompt_tokens": input_tokens,
                 "completion_tokens": completion_tokens,
-                "total_tokens": best_node.state.total_token_num,
+                "total_tokens": input_tokens + completion_tokens,
             },
         )
     except Exception as e:
@@ -139,21 +121,15 @@ async def completions(request: CompletionRequest):
 @app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
 async def chat_completions(request: ChatCompletionRequest):
     try:
-        # Load and render template
-        template = load_template(request.template_path)
-        prompt = template.render(
-            messages=request.messages,
-            add_assistant_prefix=True,  # Add 'Assistant: ' prefix for the response
-        )
+        # Generate prompt from chat messages using template
+        prompt = app.state.chat_template.render(messages=request.messages)
 
         # Create initial state
         initial_state = ReasoningState(
-            openai_client=app.state.openai_client,
-            tokenizer=app.state.tokenizer,
+            api_base_url=app.state.openai_base_url,
             max_total_tokens=request.max_tokens,
-            max_delta_new_tokens=min(50, request.max_tokens),
-            text_delta=prompt,
-            token_delta_num=len(app.state.tokenizer.tokenize(prompt).input_ids),
+            max_new_tokens_delta=min(50, request.max_tokens),
+            root_prompt=prompt,
             confidence_score=1.0,
             top_logprobs_num=5,  # Fixed for chat completions
         )
@@ -173,7 +149,7 @@ async def chat_completions(request: ChatCompletionRequest):
 
         # Calculate token usage
         input_tokens = len(app.state.tokenizer.tokenize(prompt).input_ids)
-        completion_tokens = best_node.state.total_token_num - input_tokens
+        completion_tokens = best_node.state.total_new_token_num
 
         return ChatCompletionResponse(
             id="chatcmpl-" + "".join([str(x) for x in range(10)]),
@@ -192,7 +168,7 @@ async def chat_completions(request: ChatCompletionRequest):
             usage={
                 "prompt_tokens": input_tokens,
                 "completion_tokens": completion_tokens,
-                "total_tokens": best_node.state.total_token_num,
+                "total_tokens": input_tokens + completion_tokens,
             },
         )
     except Exception as e:
@@ -203,12 +179,6 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the reasoning LLM MCTS server")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
-    parser.add_argument(
-        "--openai-api-key",
-        type=str,
-        required=True,
-        help="OpenAI API key",
-    )
     parser.add_argument(
         "--openai-api-base",
         type=str,
@@ -229,18 +199,30 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def load_template(template_path: Optional[str] = None) -> jinja2.Template:
+    if template_path is None:
+        # Use default template
+        template_dir = Path(__file__).parent / "templates"
+        template_path = template_dir / "default.j2"
+    else:
+        template_path = Path(template_path)
+        if not template_path.exists():
+            raise FileNotFoundError(f"Template file not found: {template_path}")
+
+    template_loader = jinja2.FileSystemLoader(template_path.parent)
+    template_env = jinja2.Environment(loader=template_loader)
+    return template_env.get_template(template_path.name)
+
+
 def init_app(
-    openai_api_key: str,
     openai_api_base: str,
     tokenizer_name: str,
+    chat_template_path: Optional[str] = None,
 ) -> None:
-    import openai
-
-    app.state.openai_client = openai.AsyncOpenAI(
-        api_key=openai_api_key,
-        base_url=openai_api_base,
-    )
+    """Initialize FastAPI application state"""
+    app.state.openai_base_url = openai_api_base
     app.state.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    app.state.chat_template = load_template(chat_template_path)
 
 
 def main() -> None:
@@ -248,9 +230,13 @@ def main() -> None:
     args = parser.parse_args()
 
     init_app(
-        openai_api_key=args.openai_api_key,
         openai_api_base=args.openai_api_base,
         tokenizer_name=args.tokenizer_name,
+        chat_template_path=args.template_path,
     )
 
     uvicorn.run(app, host=args.host, port=args.port)
+
+
+if __name__ == "__main__":
+    main()
