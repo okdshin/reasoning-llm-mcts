@@ -71,7 +71,19 @@ line_length = 88
 multi_line_output = 3
 
 [tool.ruff]
-select = ["E", "F", "B"]
-ignore = []
-line-length = 88
 target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "B",  # flake8-bugbear
+]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # ignore unused imports in __init__ files
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path"]
