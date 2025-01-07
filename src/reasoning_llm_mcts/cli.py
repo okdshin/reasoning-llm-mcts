@@ -27,11 +27,13 @@ def create_parser() -> argparse.ArgumentParser:
         "--top-logprobs-num",
         type=int,
         default=5,
+        help="Number of top logprobs to consider in the MCTS process",
     )
     parser.add_argument(
         "--max-new-tokens-delta",
         type=int,
         default=32,
+        help="Maximum number of new tokens per MCTS step",
     )
     return parser
 
@@ -69,7 +71,7 @@ async def completions(request: CompletionRequest):
     try:
         # Create initial state with root prompt
         initial_state = ReasoningState(
-            api_base_url=args.openai_base_url,
+            api_base_url=args.openai_api_base,
             max_total_tokens=request.max_tokens,
             max_new_tokens_delta=args.max_new_tokens_delta,
             root_prompt=request.prompt,
