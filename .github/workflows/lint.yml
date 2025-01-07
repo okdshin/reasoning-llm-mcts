@@ -25,8 +25,11 @@ jobs:
         
     - name: Run ruff check
       run: |
-        # Run with detailed output for better error understanding
-        ruff check . --show-files --show-fixes --statistics
+        # Run with statistics first
+        ruff check . --statistics || exit 1
         
-        # Run again with GitHub format if the first check passes
+        # Then show detailed file information
+        ruff check . --show-files --show-fixes || exit 1
+        
+        # Finally run with GitHub format
         ruff check . --output-format=github
