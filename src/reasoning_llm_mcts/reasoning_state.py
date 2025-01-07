@@ -40,10 +40,11 @@ class ReasoningState(State):
         for response in responses:
             logprobs = response.choices[0].logprobs
 
-            # Use only former `self.max_delta_new_tokens` tokens
+            # Use only first `self.max_delta_new_tokens` tokens
             token_logprobs = logprobs.token_logprobs[: self.max_delta_new_tokens]
 
-            # top_logprobs may contain self.top_logprobs + 1 elements
+            # top_logprobs may contain `self.top_logprobs_num + 1` elements.
+            # So take the first `self.top_logprobs_num` explicitly.
             top_logprobs = [
                 sorted(top_lps.values())[: self.top_logprobs_num]
                 for top_lps in logprobs.top_logprobs[: self.max_delta_new_tokens]
