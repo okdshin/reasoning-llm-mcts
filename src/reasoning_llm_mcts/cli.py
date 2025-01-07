@@ -69,7 +69,7 @@ async def completions(request: CompletionRequest):
             model=request.model,
             choices=[
                 {
-                    "text": best_node.state.total_prompt[len(request.prompt):],
+                    "text": best_node.state.total_prompt[len(request.prompt) :],
                     "index": 0,
                     "logprobs": None,  # Add logprobs if needed
                     "finish_reason": "stop",
