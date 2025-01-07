@@ -61,7 +61,7 @@ class ReasoningState(State):
 
             # Construct text_delta from the first max_delta_new_tokens tokens
             tokens = logprobs.tokens[: self.max_delta_new_tokens]
-            text_delta = ''.join(bytes(t.bytes).decode('utf-8') for t in tokens)
+            text_delta = "".join(bytes(t.bytes).decode("utf-8") for t in tokens)
 
             child_states.append(
                 ReasoningState(
@@ -140,7 +140,9 @@ def calc_confidence_score(
         # ci_sum += math.exp(token_lp) / sum([math.exp(top_lps) for top_lps in top_lps])
 
         max_lp = max(top_lps)
-        ci_sum += (len(top_lps) * math.exp(token_lp - max_lp)) / sum(math.exp(lp - max_lp) for lp in top_lps)
+        ci_sum += (len(top_lps) * math.exp(token_lp - max_lp)) / sum(
+            math.exp(lp - max_lp) for lp in top_lps
+        )
 
     confidence_score = ci_sum / len(token_logprobs)
     return confidence_score
