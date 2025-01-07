@@ -174,7 +174,10 @@ async def test_evaluate(child_state, mock_openai):
     call_kwargs = mock_client.completions.create.call_args.kwargs
     assert call_kwargs["prompt"] == child_state.total_prompt
     assert call_kwargs["logprobs"] == child_state.top_logprobs_num
-    assert call_kwargs["max_tokens"] == child_state.max_total_tokens - child_state.total_new_token_num
+    assert (
+        call_kwargs["max_tokens"]
+        == child_state.max_total_tokens - child_state.total_new_token_num
+    )
 
     # Test confidence score calculation and candidates update
     assert len(child_state.child_state_candidates) == 1
@@ -218,7 +221,9 @@ def test_calc_confidence_score():
     token_logprobs = [-1.0, -1.0]
     top_logprobs = [[-1.0, -1.0], [-1.0, -1.0]]
     score = calc_confidence_score(token_logprobs, top_logprobs)
-    assert math.isclose(score, 0.5, rel_tol=1e-9)  # Equal probabilities should result in 0.5
+    assert math.isclose(
+        score, 0.5, rel_tol=1e-9
+    )  # Equal probabilities should result in 0.5
 
     # Test with very different scales
     token_logprobs = [-5.0, -10.0]
@@ -232,9 +237,7 @@ def test_calc_confidence_score():
 
     # Test with different number of top logprobs
     with pytest.raises(AssertionError):
-        calc_confidence_score(
-            [-1.0, -2.0], [[-1.0, -2.0, -3.0], [-1.5, -2.5]]
-        )
+        calc_confidence_score([-1.0, -2.0], [[-1.0, -2.0, -3.0], [-1.5, -2.5]])
 
 
 @pytest.mark.asyncio
@@ -306,7 +309,9 @@ async def test_total_prompt():
     assert grandchild_state.total_prompt == "Root promptChild textGrandchild text"
 
     # Test cached property behavior
-    assert grandchild_state.total_prompt == "Root promptChild textGrandchild text"  # Should use cached value
+    assert (
+        grandchild_state.total_prompt == "Root promptChild textGrandchild text"
+    )  # Should use cached value
 
 
 def test_str_representation(child_state):
