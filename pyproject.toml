@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-reasoning-llm-mcts = "reasoning_llm_mcts.cli:main [cli]"
+reasoning-llm-mcts-server = "reasoning_llm_mcts.cli:run_server [cli]"
 
 [project.optional-dependencies]
 # CLI and API server dependencies
