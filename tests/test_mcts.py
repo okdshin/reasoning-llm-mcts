@@ -13,11 +13,14 @@ class NumberSearchState(State):
         self.value = value
         self.target = target
 
-    async def expand(self) -> "State":
+    async def expand(self, expand_num) -> "State":
         # 現在の値から少しずらした新しい値を生成
-        delta = random.uniform(-0.1, 0.1)
-        new_value = max(0, min(1, self.value + delta))
-        return NumberSearchState(new_value, self.target)
+        child_states = []
+        for _ in range(expand_num):
+            delta = random.uniform(-0.1, 0.1)
+            new_value = max(0, min(1, self.value + delta))
+            child_states.append(NumberSearchState(new_value, self.target))
+        return child_states
 
     async def evaluate(self) -> float:
         # targetに近いほど高い評価値を返す
@@ -31,9 +34,10 @@ class NumberSearchState(State):
 async def test_state_methods():
     state = NumberSearchState(0.3)
     # expandのテスト
-    new_state = await state.expand()
-    assert isinstance(new_state, NumberSearchState)
-    assert 0 <= new_state.value <= 1
+    new_states = await state.expand(expand_num=2)
+    assert len(new_states) == 2
+    assert isinstance(new_states[0], NumberSearchState)
+    assert 0 <= new_states[0].value <= 1
 
     # evaluateのテスト
     value = await state.evaluate()

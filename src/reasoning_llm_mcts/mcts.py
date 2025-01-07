@@ -1,7 +1,7 @@
 import asyncio
 import math
-from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -9,7 +9,7 @@ class State(ABC):
     """Abstract base class for MCTS state"""
 
     @abstractmethod
-    async def expand(self) -> "State":
+    async def expand(self, expand_num: int) -> list["State"]:
         """Generate a new state by expanding the current state"""
         raise NotImplementedError
 
@@ -40,9 +40,9 @@ class SearchNode:
         return len(self.children) == 0
 
     async def expand(self, expand_num: int) -> None:
-        states = await asyncio.gather(*[self.state.expand() for _ in range(expand_num)])
-        for state in states:
-            self.children.append(SearchNode(parent=self, state=state))
+        child_states = await self.state.expand(expand_num=expand_num)
+        for child_state in child_states:
+            self.children.append(SearchNode(parent=self, state=child_state))
 
     async def evaluate(self) -> float:
         return await self.state.evaluate()
