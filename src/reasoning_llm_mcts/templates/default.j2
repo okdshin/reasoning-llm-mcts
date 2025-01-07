@@ -1,0 +1,4 @@
+{% for message in messages %}{% if message.role == 'system' %}System: {{ message.content }}
+{% elif message.role == 'user' %}User: {{ message.content }}
+{% elif message.role == 'assistant' %}Assistant: {{ message.content }}
+{% endif %}{% endfor %}{% if add_assistant_prefix %}Assistant: {% endif %}
