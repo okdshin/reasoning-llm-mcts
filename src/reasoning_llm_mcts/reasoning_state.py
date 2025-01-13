@@ -156,7 +156,8 @@ class ReasoningState(State):
         if self.parent_state is None:
             return False  # root state is not terminal
         return (self.max_total_tokens <= self.total_new_token_num) or (
-                self.num_tokens_delta < self.max_new_tokens_delta)
+            self.num_tokens_delta < self.max_new_tokens_delta
+        )
 
     def __str__(self) -> str:
         return f"{self.text_delta}"

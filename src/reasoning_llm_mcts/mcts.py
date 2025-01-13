@@ -88,11 +88,15 @@ class MCTS:
                     continue
                 assert current_node.is_leaf()
                 if (not current_node.is_terminal()) and (
-                        current_node.visit_count >= self.visit_count_threshold):
+                    current_node.visit_count >= self.visit_count_threshold
+                ):
                     await current_node.expand(expand_num=self.expand_num)
                     current_node = root_node
                     continue
-                assert current_node.is_terminal() or current_node.visit_count < self.visit_count_threshold
+                assert (
+                    current_node.is_terminal()
+                    or current_node.visit_count < self.visit_count_threshold
+                )
                 """
                 if current_node.visit_count >= self.visit_count_threshold:
                     await current_node.expand(expand_num=self.expand_num)
@@ -115,6 +119,6 @@ class MCTS:
     def get_best_child(self, start_node: SearchNode) -> SearchNode:
         current_node = start_node
         while not current_node.is_leaf():
-            #print(f"{str(current_node.state)=} {current_node.children=}")
+            # print(f"{str(current_node.state)=} {current_node.children=}")
             current_node = max(current_node.children, key=lambda node: node.visit_count)
         return current_node
