@@ -1,6 +1,8 @@
 import argparse
 import asyncio
 import uuid
+import traceback
+import sys
 from pathlib import Path
 from typing import Any, Optional
 
@@ -85,6 +87,7 @@ async def completions(request: CompletionRequest):
         )
 
         best_node = await mcts.search(initial_state)
+        print(f"{best_node.state.total_prompt=}")
 
         return CompletionResponse(
             id=f"cmpl-{uuid.uuid4()}",  # Generate a unique ID
@@ -106,6 +109,11 @@ async def completions(request: CompletionRequest):
             },
         )
     except Exception as e:
+        # スタックトレースを標準出力に出力
+        traceback.print_exc(file=sys.stdout)
+        # エラーの詳細情報をログに残す
+        print(f"Error details: {str(e)}", file=sys.stdout)
+        # HTTPエラーを発生させる
         raise HTTPException(status_code=500, detail=str(e))
 
 

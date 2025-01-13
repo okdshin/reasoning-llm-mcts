@@ -1,4 +1,3 @@
-import asyncio
 import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -23,6 +22,10 @@ class State(ABC):
         """String representation of the state"""
         raise NotImplementedError
 
+    @abstractmethod
+    def is_terminal(self) -> bool:
+        return False
+
 
 @dataclass
 class SearchNode:
@@ -38,6 +41,9 @@ class SearchNode:
 
     def is_leaf(self) -> bool:
         return len(self.children) == 0
+
+    def is_terminal(self) -> bool:
+        return self.state.is_terminal()
 
     async def expand(self, expand_num: int) -> None:
         child_states = await self.state.expand(expand_num=expand_num)
@@ -81,11 +87,20 @@ class MCTS:
                     )
                     continue
                 assert current_node.is_leaf()
+                if (not current_node.is_terminal()) and (
+                        current_node.visit_count >= self.visit_count_threshold):
+                    await current_node.expand(expand_num=self.expand_num)
+                    current_node = root_node
+                    continue
+                assert current_node.is_terminal() or current_node.visit_count < self.visit_count_threshold
+                """
                 if current_node.visit_count >= self.visit_count_threshold:
                     await current_node.expand(expand_num=self.expand_num)
                     current_node = root_node
                     continue
                 assert current_node.visit_count < self.visit_count_threshold
+                """
+
                 value = await current_node.evaluate()
                 self.backpropagate(start_node=current_node, value=value)
                 break
@@ -100,6 +115,6 @@ class MCTS:
     def get_best_child(self, start_node: SearchNode) -> SearchNode:
         current_node = start_node
         while not current_node.is_leaf():
-            print(f"{str(current_node.state)=} {current_node.children=}")
+            #print(f"{str(current_node.state)=} {current_node.children=}")
             current_node = max(current_node.children, key=lambda node: node.visit_count)
         return current_node
